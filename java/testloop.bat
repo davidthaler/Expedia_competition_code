@@ -1,0 +1,1 @@
+for /L %%x in (0,1,%1) do rankLambdaMart %2 %3%%x %3-%2-%%x
