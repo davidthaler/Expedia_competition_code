@@ -18,9 +18,11 @@ load.expedia <- function(what='sample', basic.clean=TRUE){
  x
 }
 
-train.val.split <- function(nq.train, nq.val, what='sample', seed=7){
+train.val.split <- function(nq.train, nq.val, x=NULL, what='sample', seed=7){
   set.seed(seed)
-  x <- load.expedia(what)
+  if(is.null(x)){
+    x <- load.expedia(what)
+  }
   qid <- unique(x$srch_id)
   qid <- sample(qid, length(qid))
   xtr <- x[srch_id %in% qid[1:nq.train]]
