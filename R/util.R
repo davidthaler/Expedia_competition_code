@@ -1,6 +1,6 @@
 require(data.table)
 
-paths <- list('base'='/Users/davidthaler/Documents/Kaggle/expedia/')
+paths <- list('base'='../../')
 paths$data <- paste0(paths$base, 'data/')
 paths$sample <- paste0(paths$data, 'sample.csv')
 paths$train <- paste0(paths$data, 'train2.csv')
