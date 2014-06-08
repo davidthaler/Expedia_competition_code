@@ -1,6 +1,6 @@
 require(data.table)
 require(gbm)
-source('my_ndcg.R')
+source('ndcg3.R')
 
 
 rank.split <- function(split, n.trees, score.at=NULL, seed=7){
@@ -20,7 +20,7 @@ rank.split <- function(split, n.trees, score.at=NULL, seed=7){
   }
   for (s in score.at){
     pred <- predict(model, split$val, n.trees=s)
-    score <- my_ndcg(split$val$rel, split$val$srch_id, -pred, 38)
+    score <- ndcg.all(split$val, pred)
     print(paste("NDCG on validation at", s, "trees:", score))
   }
   model
