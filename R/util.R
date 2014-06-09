@@ -51,7 +51,6 @@ make.f.table <- function(split, x, smooth=100){
 
 apply.f.table <- function(f, x){
   x <- merge(x, f, by='prop_id', all.x=TRUE, all.y=FALSE)
-  x$prop_id <- NULL
   x$count[is.na(x$count)] <- 0
   x$rate[is.na(x$rate)] <- 0
   o <- order(x$srch_id, x$prop_id)
