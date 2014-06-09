@@ -36,6 +36,12 @@ train.val.split <- function(nq.train, nq.val, x=NULL, what='sample', seed=7){
   list('train'=xtr, 'val'=xval, 'qid'=qid)
 }
 
+do.business <- function(x){
+  x[, bus:= as.numeric((srch_adults_count==1) & (srch_children_count==0) &
+           (srch_saturday_night_bool==0) & (srch_room_count==1) &
+           (srch_length_of_stay <=3) & (srch_booking_window <= 10))]
+}
+
 make.f.table <- function(split, x, smooth=100){
   qids <- unique(split$train$srch_id)
   if(!is.null(split$val)){
