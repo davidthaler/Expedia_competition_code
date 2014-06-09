@@ -1,5 +1,4 @@
 require(data.table)
-
 paths <- list('base'='../../')
 paths$data <- paste0(paths$base, 'data/')
 paths$sample <- paste0(paths$data, 'sample.csv')
@@ -109,6 +108,15 @@ apply.f.table <- function(f, x){
   x[is.na(x)] <- 0
   o <- order(x$srch_id, x$prop_id)
   x <- x[o]
+}
+
+split.plus <- function(nq.train, nq.val, x){
+  split <- train.val.split(nq.train, nq.val, x)
+  f <- make.f.table(split, x)
+  split$train <- apply.f.table(f, split$train)
+  split$val <- apply.f.table(f, split$val)
+  split <- make.counts(split, x)
+  split
 }
 
 write.submission <- function(submit.number, pred, test){
