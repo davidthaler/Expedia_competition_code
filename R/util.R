@@ -28,29 +28,50 @@ train.val.split <- function(nq.train, nq.val, x=NULL, what='sample', seed=7){
   qid <- unique(x$srch_id)
   qid <- sample(qid, length(qid))
   xtr <- x[srch_id %in% qid[1:nq.train]]
-  xval <- x[srch_id %in% qid[(nq.train+1):(nq.train + nq.val)]]
+  if(nq.val > 0){
+    xval <- x[srch_id %in% qid[(nq.train+1):(nq.train + nq.val)]]
+  }else{
+    xval <- NULL
+  }
   list('train'=xtr, 'val'=xval, 'qid'=qid)
 }
 
-prop.features.split <- function(split, x, smooth=100){
-  tr.qids <- unique(split$train$srch_id)
-  val.qids <- unique(split$val$srch_id)
-  f <- x[!(srch_id %in% union(tr.qids, val.qids)), 
+make.f.table <- function(split, x, smooth=100){
+  qids <- unique(split$train$srch_id)
+  if(!is.null(split$val)){
+    qids <- union(qids, unique(split$val$srch_id))
+  }
+  f <- x[!(srch_id %in% qids), 
          list(count=.N, total.rel=sum(rel)), by=prop_id]
   setkey(f, prop_id)
   f[, rate:=total.rel/(count+smooth)]
   f$total.rel <- NULL
-  split$train <- merge(split$train, f, by='prop_id', all.x=TRUE, all.y=FALSE)
-  split$val <- merge(split$val, f, by='prop_id', all.x=TRUE, all.y=FALSE)
-  split$train$count[is.na(split$train$count)] <- 0
-  split$train$rate[is.na(split$train$rate)] <- 0
-  split$val$count[is.na(split$val$count)] <- 0
-  split$val$rate[is.na(split$val$rate)] <- 0
-  o <- order(split$val$srch_id, split$val$prop_id)
-  split$val <- split$val[o]
-  o <- order(split$train$srch_id, split$train$prop_id)
-  split$train <- split$train[o]
-  split
+  f
 }
+
+apply.f.table <- function(f, x){
+  x <- merge(x, f, by='prop_id', all.x=TRUE, all.y=FALSE)
+  x$prop_id <- NULL
+  x$count[is.na(x$count)] <- 0
+  x$rate[is.na(x$rate)] <- 0
+  o <- order(x$srch_id, x$prop_id)
+  x <- x[o]
+}
+
+write.submission <- function(submit.number, pred, test){
+  path <- paste0(paths$submissions, 'resub', submit.number, '.csv')
+  sub <- test[, list(srch_id, prop_id)]
+  o <- order(sub$srch_id, -pred)
+  sub <- sub[o]
+  write.table(sub, path, 
+              row.names=FALSE, 
+              quote=FALSE, 
+              sep=",",
+              col.names=c("SearchId", "PropertyId"))
+  print(paste('Wrote submission to : ', path))
+}
+
+
+
 
 
