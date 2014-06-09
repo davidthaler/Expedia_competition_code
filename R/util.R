@@ -41,18 +41,33 @@ make.f.table <- function(split, x, smooth=100){
   if(!is.null(split$val)){
     qids <- union(qids, unique(split$val$srch_id))
   }
-  f <- x[!(srch_id %in% qids), 
-         list(count=.N, total.rel=sum(rel)), by=prop_id]
-  setkey(f, prop_id)
-  f[, rate:=total.rel/(count+smooth)]
-  f$total.rel <- NULL
+  
+  f1 <- x[!(srch_id %in% qids), 
+         list(count1=.N, rel1=sum(rel)), by=prop_id]
+  f1[, rate1:=rel1/(count1 + smooth)]
+  setkey(f1, prop_id)
+  f1$rel1 <- NULL
+  
+  f2 <- x[!(srch_id %in% qids) & (x$random_bool==1), 
+          list(count2=.N, rel2=sum(rel)), by=prop_id]
+  f2[, rate2:=rel2/(count2 + smooth)]
+  setkey(f2, prop_id)
+  f2$rel2 <- NULL
+  
+  f3 <- x[!(srch_id %in% qids) & (x$position > 10), 
+          list(count3=.N, rel3=sum(rel)), by=prop_id]
+  f3[, rate3:=rel3/(count3 + smooth)]
+  setkey(f3, prop_id)
+  f3$rel3 <- NULL
+  
+  f <- f3[f2[f1]]
+  f[is.na(f)] <- 0
   f
 }
 
 apply.f.table <- function(f, x){
   x <- merge(x, f, by='prop_id', all.x=TRUE, all.y=FALSE)
-  x$count[is.na(x$count)] <- 0
-  x$rate[is.na(x$rate)] <- 0
+  x[is.na(x)] <- 0
   o <- order(x$srch_id, x$prop_id)
   x <- x[o]
 }
