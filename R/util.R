@@ -71,6 +71,39 @@ make.f.table <- function(split, x, smooth=100){
   f
 }
 
+make.counts <- function(split, x, test=NULL){
+  qids <- unique(split$train$srch_id)
+  if(!is.null(split$val)){
+    qids <- union(qids, unique(split$val$srch_id))
+  }
+  idx <- !(x$srch_id %in% qids)
+  c1 <- x[idx, list(site_ct = .N), by=site_id]
+  c2 <- x[idx, list(vloc_ctry = .N), by=visitor_location_country_id]
+  c3 <- x[idx, list(prop_ctry = .N), by=prop_country_id]
+  c4 <- x[idx, list(srch_dest = .N), by=srch_destination_id]
+  if(is.null(test)){
+    split$train <- merge.cts(c1, c2, c3, c4, split$train)
+    if(!is.null(split$val)){
+      split$val <- merge.cts(c1, c2, c3, c4, split$val)
+    }
+    return(split)
+  }else{
+    test <- merge.cts(c1, c2, c3, c4, test)
+    return(test)
+  }
+}
+
+merge.cts <- function(c1,c2,c3,c4,x){
+  x <- merge(x, c1, by='site_id', all.x=TRUE, all.y=FALSE)
+  x <- merge(x, c2, by='visitor_location_country_id', all.x=TRUE, all.y=FALSE)
+  x <- merge(x, c3, by='prop_country_id', all.x=TRUE, all.y=FALSE)
+  x <- merge(x, c4, by='srch_destination_id', all.x=TRUE, all.y=FALSE)
+  x[is.na(x)] <- 0
+  o <- order(x$srch_id, x$prop_id)
+  x <- x[o]
+  x
+}
+
 apply.f.table <- function(f, x){
   x <- merge(x, f, by='prop_id', all.x=TRUE, all.y=FALSE)
   x[is.na(x)] <- 0
