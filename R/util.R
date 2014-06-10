@@ -7,6 +7,7 @@ paths$test <- paste0(paths$data, 'test2.csv')
 paths$models <- paste0(paths$base, 'models/')
 paths$submissions <- paste0(paths$base, 'submissions/')
 
+
 load.expedia <- function(what='sample', basic.clean=TRUE){
  x <- fread(paths[[what]])  
  if(what %in% c('sample','train')){
@@ -18,6 +19,7 @@ load.expedia <- function(what='sample', basic.clean=TRUE){
  setkey(x, srch_id)
  x
 }
+
 
 train.val.split <- function(nq.train, nq.val, x=NULL, what='sample', seed=7){
   set.seed(seed)
@@ -35,40 +37,14 @@ train.val.split <- function(nq.train, nq.val, x=NULL, what='sample', seed=7){
   list('train'=xtr, 'val'=xval, 'qid'=qid)
 }
 
+
 do.business <- function(x){
-  x[, bus:= as.numeric((srch_adults_count==1) & (srch_children_count==0) &
-           (srch_saturday_night_bool==0) & (srch_room_count==1) &
-           (srch_length_of_stay <=3) & (srch_booking_window <= 10))]
+  b <- with(x, as.numeric((srch_adults_count==1) & (srch_children_count==0) &
+               (srch_saturday_night_bool==0) & (srch_room_count==1) &
+               (srch_length_of_stay <=3) & (srch_booking_window <= 10)))
+  x[,bus:=b]
 }
 
-make.f.table <- function(split, x, smooth=100){
-  qids <- unique(split$train$srch_id)
-  if(!is.null(split$val)){
-    qids <- union(qids, unique(split$val$srch_id))
-  }
-  
-  f1 <- x[!(srch_id %in% qids), 
-         list(count1=.N, rel1=sum(rel)), by=prop_id]
-  f1[, rate1:=rel1/(count1 + smooth)]
-  setkey(f1, prop_id)
-  f1$rel1 <- NULL
-  
-  f2 <- x[!(srch_id %in% qids) & (x$random_bool==1), 
-          list(count2=.N, rel2=sum(rel)), by=prop_id]
-  f2[, rate2:=rel2/(count2 + smooth)]
-  setkey(f2, prop_id)
-  f2$rel2 <- NULL
-  
-  f3 <- x[!(srch_id %in% qids) & (x$position > 10), 
-          list(count3=.N, rel3=sum(rel)), by=prop_id]
-  f3[, rate3:=rel3/(count3 + smooth)]
-  setkey(f3, prop_id)
-  f3$rel3 <- NULL
-  
-  f <- f3[f2[f1]]
-  f[is.na(f)] <- 0
-  f
-}
 
 make.counts <- function(split, x, test=NULL){
   qids <- unique(split$train$srch_id)
@@ -92,6 +68,7 @@ make.counts <- function(split, x, test=NULL){
   }
 }
 
+
 merge.cts <- function(c1,c2,c3,c4,x){
   x <- merge(x, c1, by='site_id', all.x=TRUE, all.y=FALSE)
   x <- merge(x, c2, by='visitor_location_country_id', all.x=TRUE, all.y=FALSE)
@@ -103,6 +80,37 @@ merge.cts <- function(c1,c2,c3,c4,x){
   x
 }
 
+
+make.f.table <- function(split, x, smooth=100){
+  qids <- unique(split$train$srch_id)
+  if(!is.null(split$val)){
+    qids <- union(qids, unique(split$val$srch_id))
+  }
+  
+  f1 <- x[!(srch_id %in% qids), 
+          list(count1=.N, rel1=sum(rel)), by=prop_id]
+  f1[, rate1:=rel1/(count1 + smooth)]
+  setkey(f1, prop_id)
+  f1$rel1 <- NULL
+  
+  f2 <- x[!(srch_id %in% qids) & (x$random_bool==1), 
+          list(count2=.N, rel2=sum(rel)), by=prop_id]
+  f2[, rate2:=rel2/(count2 + smooth)]
+  setkey(f2, prop_id)
+  f2$rel2 <- NULL
+  
+  f3 <- x[!(srch_id %in% qids) & (x$position > 10), 
+          list(count3=.N, rel3=sum(rel)), by=prop_id]
+  f3[, rate3:=rel3/(count3 + smooth)]
+  setkey(f3, prop_id)
+  f3$rel3 <- NULL
+  
+  f <- f3[f2[f1]]
+  f[is.na(f)] <- 0
+  f
+}
+
+
 apply.f.table <- function(f, x){
   x <- merge(x, f, by='prop_id', all.x=TRUE, all.y=FALSE)
   x[is.na(x)] <- 0
@@ -110,12 +118,31 @@ apply.f.table <- function(f, x){
   x <- x[o]
 }
 
+
 split.plus <- function(nq.train, nq.val, x){
   split <- train.val.split(nq.train, nq.val, x)
   f <- make.f.table(split, x)
   split$train <- apply.f.table(f, split$train)
   split$val <- apply.f.table(f, split$val)
   split <- make.counts(split, x)
+  list(train=split$train, val=split$val, f=f)
+}
+
+f.short <- function(nq.train, nq.val, x, vss=100){
+  split <- train.val.split(nq.train, nq.val, x)
+  qids <- unique(split$train$srch_id)
+  if(!is.null(split$val)){
+    qids <- union(qids, unique(split$val$srch_id))
+  }
+  idx <- !(x$srch_id %in% qids)
+  mu <- x[idx, mean(rel)]
+  f <- x[idx, list(raw = mean(rel), ct=.N), by=prop_id]
+  f[, rate := (vss*mu + ct*raw) / (vss+ct)]
+  f$raw <- NULL
+  setkey(f, prop_id)
+  split$train <- apply.f.table(f, split$train)
+  split$val <- apply.f.table(f, split$val)
+  split$f <- f
   split
 }
 
