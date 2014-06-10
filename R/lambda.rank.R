@@ -3,7 +3,7 @@ require(gbm)
 source('ndcg3.R')
 
 
-rank.split <- function(split, n.trees, score.at=NULL, seed=7){
+rank.split <- function(split, n.trees, score.at=NULL, depth=3, seed=7){
   set.seed(seed)
   dist <- list(name="pairwise",
                group="srch_id",
@@ -28,7 +28,7 @@ rank.split <- function(split, n.trees, score.at=NULL, seed=7){
                data=split$train,
                distribution=dist,
                shrinkage=0.1,
-               interaction.depth=3,
+               interaction.depth=depth,
                n.trees=n.trees)
   if(is.null(score.at)){
     score.at = n.trees

@@ -1,7 +1,7 @@
 require(data.table)
 paths <- list('base'='../../')
 paths$data <- paste0(paths$base, 'data/')
-paths$sample <- paste0(paths$data, 'sample.csv')
+paths$sample <- paste0(paths$data, 'sample40kq.csv')
 paths$train <- paste0(paths$data, 'train2.csv')
 paths$test <- paste0(paths$data, 'test2.csv')
 paths$models <- paste0(paths$base, 'models/')
@@ -35,14 +35,6 @@ train.val.split <- function(nq.train, nq.val, x=NULL, what='sample', seed=7){
     xval <- NULL
   }
   list('train'=xtr, 'val'=xval, 'qid'=qid)
-}
-
-
-do.business <- function(x){
-  b <- with(x, as.numeric((srch_adults_count==1) & (srch_children_count==0) &
-               (srch_saturday_night_bool==0) & (srch_room_count==1) &
-               (srch_length_of_stay <=3) & (srch_booking_window <= 10)))
-  x[,bus:=b]
 }
 
 
@@ -81,7 +73,7 @@ merge.cts <- function(c1,c2,c3,c4,x){
 }
 
 
-make.f.table <- function(split, x, smooth=100){
+make.f.table <- function(split, x, smooth=100, rate1.only=TRUE){
   qids <- unique(split$train$srch_id)
   if(!is.null(split$val)){
     qids <- union(qids, unique(split$val$srch_id))
@@ -92,6 +84,10 @@ make.f.table <- function(split, x, smooth=100){
   f1[, rate1:=rel1/(count1 + smooth)]
   setkey(f1, prop_id)
   f1$rel1 <- NULL
+  
+  if(rate1.only){
+    return(f1)  
+  }
   
   f2 <- x[!(srch_id %in% qids) & (x$random_bool==1), 
           list(count2=.N, rel2=sum(rel)), by=prop_id]
@@ -118,33 +114,48 @@ apply.f.table <- function(f, x){
   x <- x[o]
 }
 
+comp.comp <- function(x){
+  # compresses the 8 pairs of compK_rate and compK_rate_percent_diff variables
+  # into 8 variables
+  for (k in 1:8){
+    col1 <- paste0('comp', k, '_rate')
+    col2 <- paste0('comp', k, '_rate_percent_diff')
+    col3 <- paste0('comp', k)
+    x[[col3]] <- x[[col1]] * x[[col2]]
+    x[[col1]] <- NULL
+    x[[col2]] <- NULL
+  }
+  x
+}
 
-split.plus <- function(nq.train, nq.val, x){
+
+fuzz.rate <- function(x, sigma){
+  n <- rnorm(nrow(x), 0, sigma)
+  x$rate1 <- x$rate1 + n
+  x
+}
+
+
+split.plus <- function(nq.train, 
+                       nq.val, 
+                       x, 
+                       smooth=100, 
+                       fuzz=0.01, 
+                       use.counts=TRUE,
+                       rate1.only=TRUE){
   split <- train.val.split(nq.train, nq.val, x)
-  f <- make.f.table(split, x)
+  f <- make.f.table(split, x, smooth=smooth, rate1.only=rate1.only)
   split$train <- apply.f.table(f, split$train)
   split$val <- apply.f.table(f, split$val)
-  split <- make.counts(split, x)
+  split$train <- fuzz.rate(split$train, fuzz)
+  split$train <- comp.comp(split$train)
+  split$val <- comp.comp(split$val)
+  if(use.counts){
+    split <- make.counts(split, x)
+  }
   list(train=split$train, val=split$val, f=f)
 }
 
-f.short <- function(nq.train, nq.val, x, vss=100){
-  split <- train.val.split(nq.train, nq.val, x)
-  qids <- unique(split$train$srch_id)
-  if(!is.null(split$val)){
-    qids <- union(qids, unique(split$val$srch_id))
-  }
-  idx <- !(x$srch_id %in% qids)
-  mu <- x[idx, mean(rel)]
-  f <- x[idx, list(raw = mean(rel), ct=.N), by=prop_id]
-  f[, rate := (vss*mu + ct*raw) / (vss+ct)]
-  f$raw <- NULL
-  setkey(f, prop_id)
-  split$train <- apply.f.table(f, split$train)
-  split$val <- apply.f.table(f, split$val)
-  split$f <- f
-  split
-}
 
 write.submission <- function(submit.number, pred, test){
   path <- paste0(paths$submissions, 'resub', submit.number, '.csv')
