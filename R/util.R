@@ -80,11 +80,13 @@ make.f.table <- function(split, x, smooth=100, rate1.only=TRUE){
   }
   
   f1 <- x[!(srch_id %in% qids), 
-          list(count1=.N, rel1=sum(rel)), by=prop_id]
+          list(count1=.N, rel1=sum(rel), tot.pos=sum(1/sqrt(position))),
+          by=prop_id]
   f1[, rate1:=rel1/(count1 + smooth)]
+  f1[, pos:=tot.pos/(count1 + smooth)]
   setkey(f1, prop_id)
   f1$rel1 <- NULL
-  
+  f1$tot.pos <- NULL
   if(rate1.only){
     return(f1)  
   }
@@ -129,9 +131,9 @@ comp.comp <- function(x){
 }
 
 
-fuzz.rate <- function(x, sigma){
+fuzz.rate <- function(x, sigma, col.name='rate1'){
   n <- rnorm(nrow(x), 0, sigma)
-  x$rate1 <- x$rate1 + n
+  x[[col.name]] <- x[[col.name]] + n
   x
 }
 
