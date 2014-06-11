@@ -137,6 +137,22 @@ fuzz.rate <- function(x, sigma, col.name='rate1'){
   x
 }
 
+z.features <- function(x){
+  x[,zprice:=(price_usd - mean(price_usd))/(sd(price_usd) + 0.001), by=srch_id]
+  x[,zloc1:=(prop_location_score1 -
+                mean(prop_location_score1))/(sd(prop_location_score1) + 0.001),
+    by=srch_id]
+  x[,zloc2:=(prop_location_score2 -
+                mean(prop_location_score2))/(sd(prop_location_score2) + 0.001),
+    by=srch_id]
+  x[,zstar:=(prop_starrating - mean(prop_starrating))/(sd(prop_starrating)+ 0.001),
+    by=srch_id]
+  x[,zstar:=(prop_review_score - mean(prop_review_score))/(sd(prop_review_score)+
+                                                             0.001),
+    by=srch_id]
+  x
+}
+
 
 split.plus <- function(nq.train, 
                        nq.val, 
