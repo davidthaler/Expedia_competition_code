@@ -150,6 +150,8 @@ z.features <- function(x){
   x[,zstar:=(prop_review_score - mean(prop_review_score))/(sd(prop_review_score)+
                                                              0.001),
     by=srch_id]
+  #x[, qsize:= .N, by=srch_id]
+  x[,zrate:=(rate1 - mean(rate1))/(sd(rate1) + 0.001), by=srch_id]
   x
 }
 
@@ -158,7 +160,7 @@ split.plus <- function(nq.train,
                        nq.val, 
                        x, 
                        smooth=100, 
-                       fuzz=0.01, 
+                       fuzz=0, 
                        use.counts=TRUE,
                        rate1.only=TRUE){
   split <- train.val.split(nq.train, nq.val, x)
@@ -168,6 +170,8 @@ split.plus <- function(nq.train,
   split$train <- fuzz.rate(split$train, fuzz)
   split$train <- comp.comp(split$train)
   split$val <- comp.comp(split$val)
+  split$train <- z.features(split$train)
+  split$val <- z.features(split$val)
   if(use.counts){
     split <- make.counts(split, x)
   }
