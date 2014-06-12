@@ -17,10 +17,11 @@ cv.par <- function(split, maxnodes){
 }
 
 # This is how you make 1 RF in parallel
-rf.par <- function(split, maxnodes, ntree, cycles)
+rf.par <- function(split, maxnodes, ntree, cycles){
   # maxnodes, ntrees, cycles - all ints
   rf.par <- foreach(n=1:cycles, .combine=combine, .packages='randomForest') %dopar%{
                    randomForest(rel ~ . -srch_id -click_bool -position 
                                -booking_bool -gross_bookings_usd -date_time,
                                 data=split$train, ntree=ntree, maxnodes=maxnodes)
+                   }
 }
