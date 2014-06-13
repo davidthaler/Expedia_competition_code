@@ -14,6 +14,9 @@ load.expedia <- function(what='sample', basic.clean=TRUE){
    x[, rel:=4*booking_bool + click_bool]
  }
  if(basic.clean){
+   x$noloc2 <- as.numeric(is.na(x$prop_location_score2))
+   m <- median(x$prop_location_score2, na.rm=TRUE)
+   x$prop_location_score2[is.na(x$prop_location_score2)] <- m
    x[is.na(x)] <- 0
  }
  setkey(x, srch_id)
@@ -123,7 +126,7 @@ comp.comp <- function(x){
     col1 <- paste0('comp', k, '_rate')
     col2 <- paste0('comp', k, '_rate_percent_diff')
     col3 <- paste0('comp', k)
-    x[[col3]] <- x[[col1]] * x[[col2]]
+    x[[col3]] <- round(x[[col1]] * x[[col2]] / 10)
     x[[col1]] <- NULL
     x[[col2]] <- NULL
   }

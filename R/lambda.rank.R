@@ -33,10 +33,30 @@ train.mrr <- function(split, n.trees, score.at=NULL, depth=3, seed=7){
                group="srch_id",
                metric="mrr",
                max.rank=38)
+  model <- gbm(booking_bool ~ . -srch_id -rel -date_time
+               -click_bool -position -gross_bookings_usd,
+               data=split$train,
+               distribution=dist,
+               shrinkage=0.1,
+               interaction.depth=depth,
+               n.trees=n.trees)
+  if(is.null(score.at)){
+    score.at = n.trees
+  }
+  for (s in score.at){
+    pred <- predict(model, split$val, n.trees=s)
+    score <- ndcg.all(split$val, pred)
+    print(paste("NDCG on validation at", s, "trees:", score))
+  }
+  model
+}
+
+train.beroulli <- function(split, n.trees, score.at=NULL, depth=3, seed=7){
+  set.seed(seed)
   model <- gbm(click_bool ~ . -srch_id -rel -date_time
                -booking_bool -position -gross_bookings_usd,
                data=split$train,
-               distribution=dist,
+               distribution='bernoulli',
                shrinkage=0.1,
                interaction.depth=depth,
                n.trees=n.trees)
