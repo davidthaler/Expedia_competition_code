@@ -41,7 +41,7 @@ train.val.split <- function(nq.train, nq.val, x=NULL, what='sample', seed=7){
 }
 
 
-make.counts <- function(split, x, test=NULL){
+make.counts <- function(split, x){
   qids <- unique(split$train$srch_id)
   if(!is.null(split$val)){
     qids <- union(qids, unique(split$val$srch_id))
@@ -51,24 +51,15 @@ make.counts <- function(split, x, test=NULL){
   c2 <- x[idx, list(vloc_ctry = .N), by=visitor_location_country_id]
   c3 <- x[idx, list(prop_ctry = .N), by=prop_country_id]
   c4 <- x[idx, list(srch_dest = .N), by=srch_destination_id]
-  if(is.null(test)){
-    split$train <- merge.cts(c1, c2, c3, c4, split$train)
-    if(!is.null(split$val)){
-      split$val <- merge.cts(c1, c2, c3, c4, split$val)
-    }
-    return(split)
-  }else{
-    test <- merge.cts(c1, c2, c3, c4, test)
-    return(test)
-  }
+  list(c1,c2,c3,c4)
 }
 
 
-merge.cts <- function(c1,c2,c3,c4,x){
-  x <- merge(x, c1, by='site_id', all.x=TRUE, all.y=FALSE)
-  x <- merge(x, c2, by='visitor_location_country_id', all.x=TRUE, all.y=FALSE)
-  x <- merge(x, c3, by='prop_country_id', all.x=TRUE, all.y=FALSE)
-  x <- merge(x, c4, by='srch_destination_id', all.x=TRUE, all.y=FALSE)
+merge.cts <- function(c, x){
+  x <- merge(x, c[[1]], by='site_id', all.x=TRUE, all.y=FALSE)
+  x <- merge(x, c[[2]], by='visitor_location_country_id', all.x=TRUE, all.y=FALSE)
+  x <- merge(x, c[[3]], by='prop_country_id', all.x=TRUE, all.y=FALSE)
+  x <- merge(x, c[[4]], by='srch_destination_id', all.x=TRUE, all.y=FALSE)
   x[is.na(x)] <- 0
   o <- order(x$srch_id, x$prop_id)
   x <- x[o]
@@ -158,27 +149,39 @@ z.features <- function(x){
   x
 }
 
+downsample <- function(x, rate=0.2){
+  #examples <rate> of the negative examples in x
+  p <- x$booking_bool + runif(nrow(x))
+  x[p > (1-rate)]
+}
 
 split.plus <- function(nq.train, 
                        nq.val, 
                        x, 
                        smooth=100, 
-                       fuzz=0, 
-                       use.counts=TRUE,
-                       rate1.only=TRUE){
+                       rate1.only=FALSE){
   split <- train.val.split(nq.train, nq.val, x)
   f <- make.f.table(split, x, smooth=smooth, rate1.only=rate1.only)
   split$train <- apply.f.table(f, split$train)
   split$val <- apply.f.table(f, split$val)
-  split$train <- fuzz.rate(split$train, fuzz)
   split$train <- comp.comp(split$train)
   split$val <- comp.comp(split$val)
   split$train <- z.features(split$train)
   split$val <- z.features(split$val)
-  if(use.counts){
-    split <- make.counts(split, x)
-  }
-  list(train=split$train, val=split$val, f=f)
+  c <- make.counts(split, x)
+  split$train <- merge.cts(c, split$train)
+  split$val <- merge.cts(c, split$val)
+  list(train=split$train, val=split$val, f=f, c=c)
+}
+
+
+make.test <- function(split){
+  xtest <- load.expedia('test')
+  xtest <- apply.f.table(split$f, xtest)
+  xtest <- z.features(xtest)
+  xtest <- comp.comp(xtest)
+  xtest <- merge.cts(c, xtest)
+  xtest
 }
 
 
