@@ -151,7 +151,7 @@ z.features <- function(x){
 
 downsample <- function(x, rate=0.2){
   #examples <rate> of the negative examples in x
-  p <- x$booking_bool + runif(nrow(x))
+  p <- x$click_bool + runif(nrow(x))
   x[p > (1-rate)]
 }
 
