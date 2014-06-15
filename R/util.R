@@ -55,11 +55,11 @@ make.counts <- function(split, x){
 }
 
 
-merge.cts <- function(c, x){
-  x <- merge(x, c[[1]], by='site_id', all.x=TRUE, all.y=FALSE)
-  x <- merge(x, c[[2]], by='visitor_location_country_id', all.x=TRUE, all.y=FALSE)
-  x <- merge(x, c[[3]], by='prop_country_id', all.x=TRUE, all.y=FALSE)
-  x <- merge(x, c[[4]], by='srch_destination_id', all.x=TRUE, all.y=FALSE)
+merge.cts <- function(cts, x){
+  x <- merge(x, cts[[1]], by='site_id', all.x=TRUE, all.y=FALSE)
+  x <- merge(x, cts[[2]], by='visitor_location_country_id', all.x=TRUE, all.y=FALSE)
+  x <- merge(x, cts[[3]], by='prop_country_id', all.x=TRUE, all.y=FALSE)
+  x <- merge(x, cts[[4]], by='srch_destination_id', all.x=TRUE, all.y=FALSE)
   x[is.na(x)] <- 0
   o <- order(x$srch_id, x$prop_id)
   x <- x[o]
@@ -168,10 +168,10 @@ split.plus <- function(nq.train,
   split$val <- comp.comp(split$val)
   split$train <- z.features(split$train)
   split$val <- z.features(split$val)
-  c <- make.counts(split, x)
-  split$train <- merge.cts(c, split$train)
-  split$val <- merge.cts(c, split$val)
-  list(train=split$train, val=split$val, f=f, c=c)
+  cts <- make.counts(split, x)
+  split$train <- merge.cts(cts, split$train)
+  split$val <- merge.cts(cts, split$val)
+  list(train=split$train, val=split$val, f=f, cts=cts)
 }
 
 
@@ -180,7 +180,7 @@ make.test <- function(split){
   xtest <- apply.f.table(split$f, xtest)
   xtest <- z.features(xtest)
   xtest <- comp.comp(xtest)
-  xtest <- merge.cts(c, xtest)
+  xtest <- merge.cts(split$cts, xtest)
   xtest
 }
 
