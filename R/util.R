@@ -74,9 +74,16 @@ make.f.table <- function(split, x, smooth=100, rate1.only=TRUE){
   }
   
   f1 <- x[!(srch_id %in% qids), 
-          list(count1=.N, rel1=sum(rel), tot.pos=sum(1/sqrt(position))),
+          list(count1=.N, 
+               rel1=sum(rel), 
+               book1=sum(booking_bool),
+               click1=sum(click_bool),
+               tot.pos=sum(1/sqrt(position))),
           by=prop_id]
   f1[, rate1:=rel1/(count1 + smooth)]
+  f1[, bookrate:=book1/(count1 + smooth)]
+  f1[, clickrate:=click1/(count1 + smooth)]
+  f1[, bouncerate:=(click1 - book1)/(click1)]
   f1[, pos:=tot.pos/(count1 + smooth)]
   setkey(f1, prop_id)
   f1$rel1 <- NULL
@@ -144,8 +151,6 @@ z.features <- function(x){
   x[,zstar:=(prop_review_score - mean(prop_review_score))/(sd(prop_review_score)+
                                                              0.001),
     by=srch_id]
-  x[, qsize:= .N, by=srch_id]
-  x[,zrate:=(rate1 - mean(rate1))/(sd(rate1) + 0.001), by=srch_id]
   x
 }
 
