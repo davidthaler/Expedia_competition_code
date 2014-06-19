@@ -148,7 +148,7 @@ z.features <- function(x){
     by=srch_id]
   x[,zstar:=(prop_starrating - mean(prop_starrating))/(sd(prop_starrating)+ 0.001),
     by=srch_id]
-  x[,zstar:=(prop_review_score - mean(prop_review_score))/(sd(prop_review_score)+
+  x[,zrev:=(prop_review_score - mean(prop_review_score))/(sd(prop_review_score)+
                                                              0.001),
     by=srch_id]
   x
