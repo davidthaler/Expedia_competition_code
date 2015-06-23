@@ -1,1 +1,0 @@
-java -Xms1024M -Xmx3072M -jar RankLib-2.1-patched.jar -train "..\data\%1train.l2r" -validate "..\data\%1val.l2r" -ranker 6 -metric2t NDCG@38 -mls 1 -tc -1 -tree 500 -estop 50 -save  "..\artifacts\ranklib-LambdaMart-model-%1.mdl"

@@ -1,1 +1,0 @@
-java -jar RankLib-2.1-patched.jar -train "..\data\%1.l2r" -validate "..\data\%2.l2r" -ranker 4 -metric2t NDCG@38 -reg 0.0001 -norm zscore -save "..\artifacts\ranklib-CA-model-%3.mdl"
