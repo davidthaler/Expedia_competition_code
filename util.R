@@ -1,3 +1,8 @@
+# Functions in util.R perform data loading and feature generation for the
+# task in the Expedia hotel search results ranking competition on Kaggle.
+#
+# author: David Thaler
+
 require(data.table)
 paths <- list('base'='../')
 paths$data <- paste0(paths$base, 'data/')
